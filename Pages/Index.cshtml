@@ -1,0 +1,88 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "전자출입명부";
+}
+
+<h1>전자출입명부</h1>
+
+<div>
+    <form id="entryForm">
+        <div>
+            <label for="userName">이름</label><br />
+            <input type="text" id="userName" required />
+        </div>
+
+        <div style="margin-top: 10px;">
+            <label for="phone">전화번호</label><br />
+            <input type="text" id="phone" placeholder="010-0000-0000" required />
+        </div>
+
+        <!-- 기본값은 0으로 두고, JS에서 URL을 보고 채움 -->
+        <input type="hidden" id="locationId" value="0" />
+
+        <div style="margin-top: 15px;">
+            <button type="submit">출입 기록 남기기</button>
+        </div>
+    </form>
+
+    <p id="resultMessage" style="margin-top: 15px; font-weight:bold;"></p>
+
+</div>
+
+@section Scripts {
+    <script>
+        // ▶ URL에서 locationId 가져와서 hidden input에 넣기
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const loc = params.get("locationId");
+
+            if (loc) {
+                document.getElementById("locationId").value = loc;
+            } else {
+                // locationId가 없으면 기본값 0 또는 1로 세팅
+                document.getElementById("locationId").value = 1;
+            }
+        })();
+
+        // ▶ 폼 제출 시 API 호출
+        document.getElementById("entryForm").addEventListener("submit", async function (e) {
+            e.preventDefault(); // 기본 폼 제출 막기
+
+            const userName = document.getElementById("userName").value;
+            const phone = document.getElementById("phone").value;
+            const locationId = parseInt(document.getElementById("locationId").value);
+
+            const body = {
+                userName: userName,
+                phone: phone,
+                locationId: locationId
+            };
+
+            try {
+                const response = await fetch("/api/entry", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById("resultMessage").innerText =
+                        "✅ " + data.message + " (ID: " + data.id + ", LocationId: " + locationId + ")";
+                    document.getElementById("entryForm").reset();
+                } else {
+                    document.getElementById("resultMessage").innerText =
+                        "❌ 오류 발생: " + (data.message || "알 수 없는 오류");
+                }
+            } catch (error) {
+                console.error(error);
+                document.getElementById("resultMessage").innerText =
+                    "❌ 서버와 통신 중 오류가 발생했습니다.";
+            }
+        });
+    </script>
+}
